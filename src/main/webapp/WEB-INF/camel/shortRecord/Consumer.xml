@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!--
+TEST URL IF YOU RUN THIS LOCALLY:
+http://localhost:8084/searchservice-camel/camel/getShortRecord/sb_6037592
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+    ">
+    
+    <cxf:cxfEndpoint id="shortRecord-endpointPort" 
+                     serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.ssearch.SearchWS"
+                     wsdlURL="{{searchservice.searchws.url}}"
+        
+    >
+        <cxf:properties>
+            <entry key="dataFormat" value="PAYLOAD"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+    <bean id="CorrectDatatypeProcessor" class="dk.statsbiblioteket.searchservice.camel.sourceformats.summa.CorrectDatatypeProcessor"/>
+    <routeContext id="shortRecordConsumer" xmlns="http://camel.apache.org/schema/spring" >
+        <route group="shortRecord" id="shortRecordConsumer">
+            <from uri="direct-vm:consumeShortRecord" id="startConsumeShortRecord"/>
+ 
+            <setBody id="setBodyShortRecordRequest">
+                <simple resultType="java.lang.String">                
+                &lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;
+                &lt;directJSON xmlns="http://statsbiblioteket.dk/summa/search"&gt;
+                    &lt;json&gt;
+                    {search.document.ids:['${header.recordid}'], search.document.resultfields:['shortformat', 'recordID'], solrparam.facet:false}
+                    &lt;/json&gt;
+                &lt;/directJSON&gt;
+                </simple>
+            </setBody>
+            <log message="Preparing bean with json" loggingLevel="DEBUG" />
+            <removeHeader headerName="CamelCxfMessage"/>
+            <removeHeader headerName="Content-Type"/>
+            <removeHeader headerName="ResponseContext"/>
+            <removeHeader headerName="RequestContext"/>
+            <removeHeader headerName="transfer-encoding"/>
+            <removeHeader headerName="org.apache.cxf.headers.Header.list"/>
+            <log message="Headers:\n${headers}" loggingLevel="DEBUG"/>
+            <process ref="CorrectDatatypeProcessor" id="CorrectDatatypeProcessor"/>
+            <to uri="cxf:bean:shortRecord-endpointPort?defaultOperationName=directJSON&amp;dataFormat=PAYLOAD&amp;synchronous=true" />
+            
+            <log message="result: ${body}"  loggingLevel="DEBUG"/>
+
+            <log message="Extracting content of directJSONReturn"  loggingLevel="DEBUG"/>
+            <setBody >
+                <xpath logNamespaces="true" resultType="java.lang.String">/*/*[local-name()='directJSONReturn']</xpath>
+            </setBody>
+            <log message="Response found: ${body}"  loggingLevel="DEBUG"/>
+            <log message="Extracting content of Description"  loggingLevel="DEBUG"/>
+            <setBody >
+                <xpath logNamespaces="true" >/*/*/*/*/*/shortrecord/*/*[local-name()='Description']</xpath>
+            </setBody>
+            <log message="shortrecord found: ${body}"  loggingLevel="DEBUG"/>
+            <unmarshal>
+                <!--Dataformat to unmarshall XML to a  bean-->  
+                <xstream id="unmarshallShortRecord" permissions="dk.statsbiblioteket.searchservice.camel.sourceformats.summa.*">
+                    <aliases>
+                        <alias class="dk.statsbiblioteket.searchservice.camel.sourceformats.summa.ShortRecord" name="Description"/>
+                    </aliases>
+                </xstream>
+            </unmarshal>
+        </route>
+    </routeContext> 
+</beans>
+<!--
+<directJSONResponse>
+    <directJSONReturn>        <?xml version="1.0" encoding="UTF-8" ?>
+        <responsecollection timing="sbsolr.connect:1|sbsolr.rawcall:13|sbsolr.search.buildresponses:0|sbsolr.search.total:15|adjuster_sb.interactionadjuster.adjust.documents:0|adjuster_sb.interactionadjuster.adjust.facets:0|adjuster_sb.interactionadjuster.adjust.total:0|adjuster_sb.request.rewrite:0|adjuster_sb.response.adjust:0|adjuster_sb.total:49|adjuster_sb.aggregator.searchcall.sb:49|interactionadjuster.adjust.documents:0|interactionadjuster.adjust.facets:0|interactionadjuster.adjust.total:0|adjustingsearchnode.total:0|adjuster_summon.interactionadjuster.adjust.documents:0|adjuster_summon.interactionadjuster.adjust.facets:0|adjuster_summon.interactionadjuster.adjust.total:0|adjuster_summon.request.rewrite:0|adjuster_summon.response.adjust:0|adjuster_summon.total:34|adjuster_summon.aggregator.searchcall.summon:34|responsemerger.merge:0|responsemerger.post:0|responsemerger.total:0|aggregator.searchandmergeall:50|solr.buildquery:0|sbsolr.reportedtime:10|sbsolr.buildresponses.total:0" machine="mars">
+            <response name="DocumentResponse">
+                <documentresult filters="" query="recordID:&quot;sb_6037592&quot;" startIndex="0" maxRecords="1" reverseSort="true" fields="" searchTime="10" timing="solr.buildquery:0|sbsolr.reportedtime:10|sbsolr.buildresponses.total:0" hitCount="1">
+                    <record score="1.0" unadjustedscore="0.0" sortValue="0.0" id="sb_6037592" source="sbsolr">
+                        <field name="recordID">sb_6037592</field>
+                        <field name="shortformat">
+                            <shortrecord>
+                                <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+                                    <rdf:Description>
+                                        <dc:title>Hest</dc:title>
+                                        <dc:creator>Katie Dicker</dc:creator>
+                                        <dc:type xml:lang="da">bog</dc:type>
+                                        <dc:type xml:lang="en">book</dc:type>
+                                        <dc:date>2014</dc:date>
+                                        <dc:identifier>ISBN 9788762721074</dc:identifier>
+                                    </rdf:Description>
+                                </rdf:RDF>
+                            </shortrecord>
+                        </field>
+                    </record>
+                </documentresult>
+            </response>
+        </responsecollection>
+    </directJSONReturn>
+</directJSONResponse>
+-->

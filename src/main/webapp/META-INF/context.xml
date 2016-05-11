@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/searchservice-ws">
+  <Environment name="GUSTAV" type="java.lang.String" value="TESTER"/>
+  <!--<Environment name="searchservice-ws/configuration" value="file://${user.home}/searchservice-ws.properties" type="java.lang.String" override="false"/>-->
+  <Environment name="searchservice-ws/configuration" override="false" type="java.lang.String" value="classpath:test-searchservice.properties"/>
+</Context>

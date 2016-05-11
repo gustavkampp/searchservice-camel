@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+    ">
+    
+    <bean id="configurationfile" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <property name="jndiName" value="java:comp/env/searchservice-ws/configuration"/>
+    </bean>
+    <bean id="searchserviceProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="location" ref="configurationfile"/>
+    </bean>
+
+
+    <import resource="*/*.xml"/>
+    <import resource="produceJson.xml"/>
+
+    <camelContext xmlns="http://camel.apache.org/schema/spring" id="generalContext">
+        <propertyPlaceholder id="properties"
+            location="ref:searchserviceProperties"
+            xmlns="http://camel.apache.org/schema/spring"/>
+ 
+        
+        <routeContextRef ref="produceJson"/>
+
+        <routeContextRef ref="facultyInfoConsumer"/>
+        <routeContextRef ref="facultyInfoProducer"/>
+
+        <routeContextRef ref="pickupOptionsConsumer"/>
+        <routeContextRef ref="pickupOptionsProducer"/>
+
+        <routeContextRef ref="marcRecordConsumer"/>
+        <routeContextRef ref="marcRecordProducer"/>
+        <routeContextRef ref="marcRecordProduceBean"/>
+        <routeContextRef ref="getMarcField"/>
+
+        <routeContextRef ref="requestOptionsConsumer"/>
+        <routeContextRef ref="requestOptionsProducer"/>
+
+        <routeContextRef ref="getSagerConsumer"/>
+        <routeContextRef ref="getSagerProducer"/>
+
+        <routeContextRef ref="requestSummaryConsumer"/>
+        <routeContextRef ref="requestSummaryProducer"/>
+
+        <routeContextRef ref="requestOptionsV2Producer"/>
+
+        <restContextRef ref="facultyInfoRestContext"/>
+        <restContextRef ref="pickupOptionsRestContext"/>
+        <restContextRef ref="marcRecordRestContext"/>
+        <restContextRef ref="requestOptionsRestContext"/>
+        <restContextRef ref="requestOptionsV2RestContext"/>
+        <restContextRef ref="getSagerRestContext"/>
+        <restContextRef ref="requestSummaryRestContext"/>
+
+        <!-- Common functionality for all cameContexts -->        
+        <restConfiguration component="servlet" contextPath="/searchservice-camel/v2"/>
+    </camelContext>
+    
+</beans>

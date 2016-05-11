@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    This is an experiment to figure out how to make more seperate contexts in camel,
+    and determine how they interact.
+    
+    There is no recognizable difference, and this can be considered a way to logically
+    organize the files.
+    
+    Beans defined are shared across the context files (logically, as they are outside 
+    the camelContext)
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+    ">
+    <import resource="shortRecord/*.xml"/>
+    
+    <camelContext xmlns="http://camel.apache.org/schema/spring" id="shortRecordContext">
+
+        <propertyPlaceholder id="properties"
+            location="ref:searchserviceProperties"
+            xmlns="http://camel.apache.org/schema/spring"/>
+
+        <routeContextRef ref="shortRecordConsumer"/>
+        <routeContextRef ref="shortRecordProducer"/>
+
+        <restContextRef ref="shortRecordRestContext"/>
+
+        <restConfiguration component="servlet" contextPath="/searchservice-camel/v2"/>
+
+    </camelContext>
+</beans>

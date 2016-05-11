@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+    ">
+    
+    
+
+    <restContext id="getSagerRestContext" xmlns="http://camel.apache.org/schema/spring" >
+        <rest path="/getSager" id="getSagerRest">
+            <get uri="/{borrowerid}/" id="toGetSagerRest">
+                <to uri="direct-vm:restGetSager"/>
+            </get>
+        </rest>
+    </restContext>
+</beans>

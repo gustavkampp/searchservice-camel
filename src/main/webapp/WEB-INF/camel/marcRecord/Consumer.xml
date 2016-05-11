@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+TEST URL IF YOU RUN THIS LOCALLY:
+http://localhost:8084/searchservice-ws/v2/getMarcRecord/sb_6037592
+-->
+
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+    ">
+    <cxf:cxfEndpoint id="storage-endpointPort" 
+                     serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.sstorage.StorageWS"
+                     wsdlURL="{{searchservice.storagews.url}}"
+        
+    />
+    <!-- The structure of the request for a Marc record is quite special, and 
+    therefore a special handler class is defined to handle this. -->
+    <bean id="storage-prepareRequest" class="dk.statsbiblioteket.searchservice.camel.handler.summastorage.GetRecordRequest"/>
+    
+    <routeContext id="marcRecordConsumer" xmlns="http://camel.apache.org/schema/spring">
+        <route group="marcRecord" id="marcRecordConsumer" streamCache="true">
+            <from uri="direct-vm:consumeMarcRecord"/>
+            <log message="Preparing bean for requesting data ${header.recordid}"  loggingLevel="DEBUG"/>
+            <to uri="bean:storage-prepareRequest" />
+            <log message="Start reading marcrecord from remote service, calling with: \n${body}"  loggingLevel="DEBUG"/>
+            <to uri="cxf:bean:storage-endpointPort?defaultOperationName=getRecords&amp;synchronous=true" />
+            <setBody >
+                <xpath logNamespaces="true" >/*/*/*/*[local-name()='record']</xpath>
+            </setBody>
+            <log message="result body: ${body}"  loggingLevel="INFO"/>
+
+        </route>
+    </routeContext>
+</beans>
+<!-- an example
+
+<record xmlns="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:null="http://www.loc.gov/MARC21/slim" schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">
+    <leader>     nam  22        4500</leader>
+    <datafield tag="004" ind1="0" ind2="0">
+        <subfield code="r">n</subfield>
+        <subfield code="a">e</subfield>
+    </datafield>
+    <datafield tag="008" ind1="0" ind2="0">
+        <subfield code="t">m</subfield>
+        <subfield code="u">f</subfield>
+        <subfield code="a">2014</subfield>
+        <subfield code="b">dk</subfield>
+        <subfield code="d">å</subfield>
+        <subfield code="d">y</subfield>
+        <subfield code="l">dan</subfield>
+        <subfield code="o">b</subfield>
+        <subfield code="x">02</subfield>
+        <subfield code="v">0</subfield>
+    </datafield>
+    <datafield tag="009" ind1="0" ind2="0">
+        <subfield code="a">a</subfield>
+        <subfield code="g">xx</subfield>
+    </datafield>
+    <datafield tag="010" ind1="0" ind2="0">
+        <subfield code="a">5 084 131 6</subfield>
+        <subfield code="b">870970</subfield>
+        <subfield code="c">20131213121046</subfield>
+        <subfield code="d">20131203</subfield>
+        <subfield code="f">a</subfield>
+        <subfield code="t">FAUST</subfield>
+    </datafield>
+    <datafield tag="021" ind1="0" ind2="0">
+        <subfield code="e">9788762721074</subfield>
+        <subfield code="c">ib.</subfield>
+    </datafield>
+    <datafield tag="032" ind1="0" ind2="0">
+        <subfield code="a">DBF201401</subfield>
+        <subfield code="x">BKM201401</subfield>
+    </datafield>
+    <datafield tag="041" ind1="0" ind2="0">
+        <subfield code="a">dan</subfield>
+        <subfield code="c">eng</subfield>
+    </datafield>
+    <datafield tag="042" ind1="0" ind2="0">
+        <subfield code="a">13</subfield>
+        <subfield code="b">Ml 8,7 + Lo 4,3</subfield>
+        <subfield code="c">15</subfield>
+    </datafield>
+    <datafield tag="100" ind1="0" ind2="0">
+        <subfield code="a">Dicker</subfield>
+        <subfield code="h">Katie</subfield>
+        <subfield code="4">aut</subfield>
+    </datafield>
+    <datafield tag="241" ind1="0" ind2="0">
+        <subfield code="a">Horse</subfield>
+    </datafield>
+    <datafield tag="245" ind1="0" ind2="0">
+        <subfield code="a">Hest</subfield>
+    </datafield>
+    <datafield tag="260" ind1="0" ind2="0">
+        <subfield code="a">Holte</subfield>
+        <subfield code="b">Flachs</subfield>
+        <subfield code="c">2014</subfield>
+    </datafield>
+    <datafield tag="300" ind1="0" ind2="0">
+        <subfield code="a">24 sider</subfield>
+        <subfield code="b">ill. i farver</subfield>
+    </datafield>
+    <datafield tag="440" ind1="0" ind2="0">
+        <subfield code="a">Husdyr</subfield>
+    </datafield>
+    <datafield tag="521" ind1="0" ind2="0">
+        <subfield code="b">1. oplag</subfield>
+        <subfield code="c">2013</subfield>
+        <subfield code="k">tr. i udl.</subfield>
+    </datafield>
+    <datafield tag="530" ind1="0" ind2="0">
+        <subfield code="a">Indhold: Min verden ; Årstiderne ; Fra hoved til hale ; Pasning ; Munden ; Spisetid ; Hopper og føl ; På arbejde ; Heste verden rundt ; Vidste du det?</subfield>
+    </datafield>
+    <datafield tag="532" ind1="0" ind2="0">
+        <subfield code="a">Med litteraturhenvisninger</subfield>
+    </datafield>
+    <datafield tag="652" ind1="0" ind2="0">
+        <subfield code="m">63.61</subfield>
+    </datafield>
+    <datafield tag="666" ind1="0" ind2="0">
+        <subfield code="f">heste</subfield>
+    </datafield>
+    <datafield tag="666" ind1="0" ind2="0">
+        <subfield code="u">let at læse</subfield>
+    </datafield>
+    <datafield tag="666" ind1="0" ind2="0">
+        <subfield code="u">for 7 år</subfield>
+    </datafield>
+    <datafield tag="666" ind1="0" ind2="0">
+        <subfield code="u">for 8 år</subfield>
+    </datafield>
+    <datafield tag="720" ind1="0" ind2="0">
+        <subfield code="o">Anette Hellemann</subfield>
+        <subfield code="4">trl</subfield>
+    </datafield>
+    <datafield tag="001" ind1=" " ind2=" ">
+        <subfield code="a">6037592</subfield>
+        <subfield code="f">a</subfield>
+    </datafield>
+    <datafield tag="AVA" ind1=" " ind2=" ">
+        <subfield code="a">SOL50</subfield>
+        <subfield code="b">SBMAG</subfield>
+        <subfield code="c">Magasin,pligtafl. mat.</subfield>
+        <subfield code="d">2-136-5310</subfield>
+        <subfield code="e">available</subfield>
+        <subfield code="t">Hjemme</subfield>
+        <subfield code="f">1</subfield>
+        <subfield code="g">0</subfield>
+        <subfield code="h">N</subfield>
+        <subfield code="i">0</subfield>
+        <subfield code="j">SMAGP</subfield>
+    </datafield>
+    <datafield tag="AVA" ind1=" " ind2=" ">
+        <subfield code="a">SOL50</subfield>
+        <subfield code="b">UDPB</subfield>
+        <subfield code="c">DPB Undervisningsmat.</subfield>
+        <subfield code="d">63.61 Dic</subfield>
+        <subfield code="e">available</subfield>
+        <subfield code="t">Hjemme</subfield>
+        <subfield code="f">1</subfield>
+        <subfield code="g">0</subfield>
+        <subfield code="h">N</subfield>
+        <subfield code="i">0</subfield>
+        <subfield code="j">USKS</subfield>
+    </datafield>
+    <datafield tag="OWN" ind1=" " ind2=" ">
+        <subfield code="a">UDPB</subfield>
+    </datafield>
+    <datafield tag="HO0" ind1="9" ind2="9">
+        <subfield code="~">UDPB</subfield>
+        <subfield code="a">tv1401</subfield>
+    </datafield>
+    <datafield tag="HOL" ind1="0" ind2="8">
+        <subfield code="~">UDPB</subfield>
+        <subfield code="o">s</subfield>
+    </datafield>
+    <datafield tag="OWN" ind1=" " ind2=" ">
+        <subfield code="a">SB</subfield>
+    </datafield>
+    <datafield tag="HO5" ind1="9" ind2="0">
+        <subfield code="~">SB</subfield>
+        <subfield code="k">m140319</subfield>
+        <subfield code="v">Pli</subfield>
+    </datafield>
+    <datafield tag="Z30" ind1="-" ind2="1">
+        <subfield code="l">SOL01</subfield>
+        <subfield code="8">20140102</subfield>
+        <subfield code="m">BOG</subfield>
+        <subfield code="1">UDPB</subfield>
+        <subfield code="2">USKS</subfield>
+        <subfield code="3">63.61 Dic</subfield>
+        <subfield code="5">450011481138</subfield>
+        <subfield code="f">10</subfield>
+        <subfield code="g">19704</subfield>
+    </datafield>
+    <datafield tag="Z30" ind1="-" ind2="1">
+        <subfield code="l">SOL01</subfield>
+        <subfield code="8">20140319</subfield>
+        <subfield code="m">BOG</subfield>
+        <subfield code="1">SBMAG</subfield>
+        <subfield code="2">SMAGP</subfield>
+        <subfield code="3">2-136-5310</subfield>
+        <subfield code="5">400027142069</subfield>
+        <subfield code="f">10</subfield>
+    </datafield>
+    <datafield tag="PST" ind1=" " ind2=" ">
+        <subfield code="0">Z30</subfield>
+        <subfield code="1">006037592000030</subfield>
+        <subfield code="b">SBMAG</subfield>
+        <subfield code="c">SMAGP</subfield>
+        <subfield code="o">BOG</subfield>
+        <subfield code="d">10</subfield>
+        <subfield code="f">N</subfield>
+        <subfield code="r">SOL60-000000000</subfield>
+        <subfield code="h">2-136-5310</subfield>
+        <subfield code="3">Bøger</subfield>
+        <subfield code="4">SB Magasin, Bogtårnet</subfield>
+        <subfield code="5">Magasin,pligtafl. mat.</subfield>
+        <subfield code="6">Alm. udlån</subfield>
+    </datafield>
+    <datafield tag="PST" ind1=" " ind2=" ">
+        <subfield code="0">Z30</subfield>
+        <subfield code="1">006037592000020</subfield>
+        <subfield code="b">UDPB</subfield>
+        <subfield code="c">USKS</subfield>
+        <subfield code="o">BOG</subfield>
+        <subfield code="d">10</subfield>
+        <subfield code="f">N</subfield>
+        <subfield code="r">SOL60-000000000</subfield>
+        <subfield code="h">63.61 Dic</subfield>
+        <subfield code="3">Bøger</subfield>
+        <subfield code="4">AUL Campus Emdrup (DPB)</subfield>
+        <subfield code="5">DPB Undervisningsmat.</subfield>
+        <subfield code="6">Alm. udlån</subfield>
+    </datafield>
+    <datafield tag="SBL" ind1=" " ind2=" ">
+        <subfield code="a">SBMAG</subfield>
+    </datafield>
+    <datafield tag="SBL" ind1=" " ind2=" ">
+        <subfield code="a">UDPB</subfield>
+    </datafield>
+    <datafield tag="LOC" ind1=" " ind2=" ">
+        <subfield code="b">SBMAG</subfield>
+        <subfield code="c">SMAGP</subfield>
+        <subfield code="h">2-136-5310</subfield>
+        <subfield code="o">BOG</subfield>
+    </datafield>
+    <datafield tag="LOC" ind1=" " ind2=" ">
+        <subfield code="b">UDPB</subfield>
+        <subfield code="c">USKS</subfield>
+        <subfield code="h">63.61 Dic</subfield>
+        <subfield code="o">BOG</subfield>
+    </datafield>
+    <datafield tag="STS" ind1=" " ind2=" ">
+        <subfield code="a">10</subfield>
+    </datafield>
+    <datafield tag="COU" ind1="N" ind2="T">
+        <subfield code="a">AUL Campus Emdrup (DPB)</subfield>
+        <subfield code="b">DPB Undervisningsmat.</subfield>
+        <subfield code="c">63.61 Dic</subfield>
+        <subfield code="d"> 1</subfield>
+        <subfield code="e"> 0</subfield>
+        <subfield code="f"> 0</subfield>
+        <subfield code="g"> 0</subfield>
+        <subfield code="h"> 0</subfield>
+        <subfield code="i"> 0</subfield>
+        <subfield code="j"> 0</subfield>
+    </datafield>
+    <datafield tag="COU" ind1="N" ind2="T">
+        <subfield code="a">SB Magasin, Bogtårnet</subfield>
+        <subfield code="b">Magasin,pligtafl. mat.</subfield>
+        <subfield code="c">2-136-5310</subfield>
+        <subfield code="d"> 1</subfield>
+        <subfield code="e"> 0</subfield>
+        <subfield code="f"> 0</subfield>
+        <subfield code="g"> 0</subfield>
+        <subfield code="h"> 0</subfield>
+        <subfield code="i"> 0</subfield>
+        <subfield code="j"> 0</subfield>
+    </datafield>
+</record>
+</content>
+</record>-->

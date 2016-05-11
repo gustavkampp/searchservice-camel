@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!--
+TEST URL IF YOU RUN THIS LOCALLY:
+http://localhost:8084/searchservice-camel/camel/getFacultyInfo
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+    ">
+    
+    
+    <routeContext id="requestSummaryConsumer" xmlns="http://camel.apache.org/schema/spring" >
+        <route group="requestSummary" id="requestSummaryConsumer">
+            <!-- This route is invoked whenever another route ends in a 'direct-vm:requestSummary' Endpoint -->
+            <from uri="direct-vm:requestSummaryConsumer"/>
+
+            <!-- First look this up in the cache -->
+                    <log message="Start reading FacultyInfo from remote service" loggingLevel="DEBUG" />
+                    <log message="Clearing Body - there is no use of it in this call"  loggingLevel="DEBUG"/>
+                    <!-- 
+                        Since Netty4-http reuses ALL the headers coming with the requesting msg, 
+                        Accept-Encoding is also forwardet to the Netty4 endpoint. 
+
+                        But Netty4 doesn't uncompress the body , and so the unmarshalling will fail.
+
+                        In order to prevent this issue, the Accept-Encoding header is removed. 
+                        It may be possible to choose to kust change it.
+
+                    -->
+                    <removeHeaders pattern="accept-encoding"/>
+                    <removeHeaders pattern="if*"/>
+                    <removeHeaders pattern="CamelHttp*"/>
+                    <setHeader headerName="CamelHttpMethod">
+                        <constant>GET</constant>
+                    </setHeader>
+                    <setHeader headerName="Accept">
+                        <constant>application/json</constant>
+                    </setHeader>
+                    <setHeader headerName="CamelHttpPath">
+                        <simple>
+                            ${in.header.borrowerid}                            
+                        </simple>
+                    </setHeader>
+                    <log message="Starting Netty4 call with headers: ${headers} to URL {{searchservice.elbaelba.url}}requestsummarylist/${headers.borrowerid}"  loggingLevel="INFO"/>
+                    <to uri="netty4-http:{{searchservice.elbaelba.url}}requestsummarylist/?exchangePattern=InOut&amp;synchronous=true" id="requestSummaryConsumerNetty"/>
+
+                    <!--
+                        the log message can log both ${headers} and ${body} content as part of the message
+
+            -->
+            <log message="got ${headers}"  loggingLevel="DEBUG"/>
+            <!-- unmarshal the received content, so the consumer can return a bean -->
+            <!--                    <unmarshal>
+                 Dataformat to unmarshall XML to a FacultyLocations bean  
+                <xstream id="unmarshallFacultyLocations" permissions="dk.statsbiblioteket.searchservice.camel.targetformats.facultyinfo.*">
+                    <aliases>
+                        <alias class="dk.statsbiblioteket.searchservice.camel.targetformats.facultyinfo.FacultyLocations" name="data"/>
+                    </aliases>
+                </xstream>
+            </unmarshal>-->
+
+                        
+        </route>
+    </routeContext>
+</beans>

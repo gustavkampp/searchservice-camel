@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!--
+TEST URL IF YOU RUN THIS LOCALLY:
+http://localhost:8084/searchservice-camel/camel/getPickupOptions/4099001800
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+    ">
+    <cxf:cxfEndpoint id="userRegistry-endpointPort" 
+        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.uregistry.UserRegistrySoap"
+        wsdlURL="{{searchservice.wsuserregistry.url}}"
+        
+    />
+    <bean id="pickupOptionsConsumer-cxftype" class="dk.statsbiblioteket.searchservice.common.wsgen.uregistry.LookupUserAttributeRequest">
+        <property name="attributeGroup" value="pickup"/>
+        <property name="attributeName" value="primary-pickup"/>
+    </bean>
+    <routeContext id="pickupOptionsConsumer" xmlns="http://camel.apache.org/schema/spring" >
+        <route group="pickupOptions" id="pickupOptionsConsumer">
+            <from uri="direct-vm:pickupOptions"/>
+            <log message="Preparing bean for requesting data ${header.borrowerid}"  loggingLevel="DEBUG"/>
+            <to uri="bean:pickupOptionsConsumer-cxftype?method=setAccountId(${headers.borrowerid})"/>
+            <log message="Preparing request body"  loggingLevel="DEBUG"/>
+            <transform>
+                <simple>
+                    ${ref:pickupOptionsConsumer-cxftype}
+                </simple>
+            </transform>
+            <log message="Start reading pickupOptions from remote service, calling with: \n${body}"  loggingLevel="DEBUG"/>
+            <!--<removeHeaders pattern="*"/>-->
+            <to uri="cxf:bean:userRegistry-endpointPort?defaultOperationName=lookupUserAttribute&amp;synchronous=true" />
+            <log message="result: ${body}"  loggingLevel="DEBUG"/>
+        </route>
+    </routeContext>
+</beans>

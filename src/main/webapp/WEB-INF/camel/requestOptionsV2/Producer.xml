@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+    ">
+    
+    <bean id="requestOptionsV2ProducerOutput" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.RequestOption"/>
+    <bean id="addRequestOptionsStrategy" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.RequestOptionsAggregator"/>
+    <bean id="addShortRecordStrategy" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.ShortRecordAggregator"/>
+    <bean id="addFacultyInfoStrategy" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.FacultyInfoAggregator"/>
+    <bean id="pickupOptionsProcessor" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.PickupOptionsProcessor"/>
+    <bean id="setPreferredLocationStrategy" class="dk.statsbiblioteket.searchservice.camel.targetformats.requestoptionsv2.SetPreferredLocationAggregator"/>
+    
+    <routeContext id="requestOptionsV2Producer" xmlns="http://camel.apache.org/schema/spring" >
+
+        <route group="requestOptionsV2" id="requestOptionsV2Producer">
+            <from uri="direct-vm:restRequestOptionsV2"/>
+            <!-- Save the incomming parameters as properties ( headers can be 
+            wiped by routes ) -->
+            <setProperty propertyName="borrowerid">
+                <simple>${headers.borrowerid}</simple>
+            </setProperty>
+            <setProperty propertyName="materialid">
+                <simple>${headers.materialid}</simple>
+            </setProperty>
+            <!-- Create and Enrich response in the bean requestOptionsV2ProducerOutput) 
+            with content from facultyInfo, marcRecord, pickupOptions, requestOptions 
+            and shortRecord. -->
+
+            <!-- 1. get the Marc record (with the materialid) -->
+            <setHeader headerName="recordid">
+                <simple>${headers.materialid}</simple>
+            </setHeader>
+            <setHeader headerName="field">
+                <constant>001</constant>
+            </setHeader>
+            <setHeader headerName="subfield">
+                <constant>a</constant>
+            </setHeader>
+            <to uri="direct-vm:getMarcField"/>
+
+            <!-- 2. Enrich the requestOptionsV2ProducerOutput with RequestOptions (retreived with the Marc Record and the borrowerid ) -->
+            <log message="Marc field collected: ${body}" loggingLevel="DEBUG"/>
+            <setHeader headerName="bibno">
+                <simple>${body}</simple>
+            </setHeader>
+            <setBody>
+                <simple>${ref:requestOptionsV2ProducerOutput}</simple>
+            </setBody>
+            <log message="Make a enrich call to requestOptionsConsumer" loggingLevel="DEBUG"/>
+            <enrich strategyRef="addRequestOptionsStrategy" >
+                <constant>direct-vm:requestOptions</constant>
+            </enrich>
+
+            <!--3. Enrich the requestOptionsV2ProducerOutput with the ShortRecord (retreived with the materialid )--> 
+            <log message="Make a enrich call to shortRecordConsumer" loggingLevel="DEBUG"/>
+            <enrich strategyRef="addShortRecordStrategy">
+                <constant>direct-vm:consumeShortRecord</constant>
+            </enrich>
+
+            <!--4. Enrich the requestOptionsV2ProducerOutput with FacultyInfo--> 
+            <enrich strategyRef="addFacultyInfoStrategy">
+                <constant>direct-vm:facultyInfoConsumer</constant>
+            </enrich>
+
+            <!--6. Enrich the requestOptionsV2ProducerOutput (pickupOptions) with PickupOptions ( retreived with borrowerid )--> 
+            <enrich strategyRef="setPreferredLocationStrategy">
+                <constant>direct-vm:pickupOptions</constant>
+            </enrich>
+
+            <!--5. Enrich the requestOptionsV2ProducerOutput (pickupOptions) with RequestOptions ( from cache? ) using a process, since data are already collected --> 
+            <process ref="pickupOptionsProcessor"/>
+
+
+            <!--<removeHeaders pattern="*"/>-->
+            <to uri="direct-vm:produceJson"/>
+        </route>
+    </routeContext>
+
+</beans>
