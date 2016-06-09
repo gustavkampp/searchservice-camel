@@ -17,11 +17,6 @@ http://localhost:8084/searchservice-ws/v2/getMarcRecord/sb_6037592
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    <cxf:cxfEndpoint id="storage-endpointPort" 
-                     serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.sstorage.StorageWS"
-                     wsdlURL="{{searchservice.storagews.url}}"
-        
-    />
     <!-- The structure of the request for a Marc record is quite special, and 
     therefore a special handler class is defined to handle this. -->
     <bean id="storage-prepareRequest" class="dk.statsbiblioteket.searchservice.camel.handler.summastorage.GetRecordRequest"/>
@@ -37,7 +32,6 @@ http://localhost:8084/searchservice-ws/v2/getMarcRecord/sb_6037592
                 <xpath logNamespaces="true" >/*/*/*/*[local-name()='record']</xpath>
             </setBody>
             <log message="result body: ${body}"  loggingLevel="INFO"/>
-
         </route>
     </routeContext>
 </beans>

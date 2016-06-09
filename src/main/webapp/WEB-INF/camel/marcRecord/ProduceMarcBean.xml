@@ -12,9 +12,21 @@
        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
     
+    <bean id="emptyMarcBean" class="dk.statsbiblioteket.searchservice.camel.sourceformats.marc.Marc"/>
+
     <routeContext id="marcRecordProduceBean" xmlns="http://camel.apache.org/schema/spring">
+        <route group="marcRecord" id="marcRecordConsumerError">
+            <from uri="direct-vm:marcRecordConsumerError"/>
+            <setBody id="SetErrorBody">
+                <constant>No marc record found</constant>
+            </setBody>
+            <setHeader id="setErrorStatusCodeHeader" headerName="CamelHttpResponseCode">
+                <constant>404</constant>
+            </setHeader>
+        </route>
+
         <route group="marcRecord" id="marcRecordProduceBean">
-            <from uri="direct-vm:marcRecordProduceBean"/>
+            <from uri="direct-vm:marcRecordProduceBean"/> 
             <unmarshal>
                 <xstream id="unmarshallMarcRecord" permissions="dk.statsbiblioteket.searchservice.camel.sourceformats.marc.*">
                     <aliases>
@@ -22,6 +34,11 @@
                     </aliases>
                 </xstream>
             </unmarshal>
+            <camel:onException>
+                <exception>com.thoughtworks.xstream.io.StreamException</exception>
+                <exception>com.ctc.wstx.exc.WstxEOFException</exception>
+                <to uri="direct-vm:marcRecordConsumerError" id="handleMarcRecordConsumerError"/>
+            </camel:onException>
 
         </route>
     </routeContext>

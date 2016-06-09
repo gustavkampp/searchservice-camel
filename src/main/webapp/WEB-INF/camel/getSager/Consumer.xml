@@ -32,12 +32,6 @@ http://localhost:8084/searchservice-camel/camel/getSager/4099001800/6037592
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    <cxf:cxfEndpoint id="esag-endpointPort" 
-        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.esag.EsagSoap"
-        wsdlURL="{{searchservice.wsesag.url}}"
-        
-    > 
-    </cxf:cxfEndpoint>
     <bean id="getSagerConsumer-cxftype" class="dk.statsbiblioteket.searchservice.common.wsgen.esag.GetSagerRequest">
         <property name="userId" value="unknown"/>
     </bean>

@@ -15,43 +15,43 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<!--
-TEST URL IF YOU RUN THIS LOCALLY:
-http://localhost:8084/searchservice-camel/camel/getRequestOptions/4099001800/6037592
--->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
        xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
-       xmlns:cxf="http://camel.apache.org/schema/cxf"
        xmlns:p="http://www.springframework.org/schema/p"
        xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
        http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
-       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    <bean id="requestOptionsConsumer-cxftype" class="dk.statsbiblioteket.searchservice.common.wsgen.holding.RequestOptionsRequest">
-        <property name="bibliographicNumber" value="unknown"/>
-        <property name="userIdentification" value="unknown"/>
-    </bean>
-    <routeContext id="requestOptionsConsumer" xmlns="http://camel.apache.org/schema/spring" >
-        <route group="requestOptions" id="requestOptionsConsumer">
-            <from uri="direct-vm:requestOptions"/>
-            <log message="Preparing bean for requesting data ${header.borrowerid}"  loggingLevel="DEBUG"/>
-            <to uri="bean:requestOptionsConsumer-cxftype?method=setUserIdentification(${headers.borrowerid})"/>
-            <log message="Preparing bean for requesting data ${header.bibno}"  loggingLevel="DEBUG"/>
-            <to uri="bean:requestOptionsConsumer-cxftype?method=setBibliographicNumber(${headers.bibno})"/>
-            <transform>
-                <simple>
-                    ${ref:requestOptionsConsumer-cxftype}
-                </simple>
-            </transform>
+    
+    
 
-            <log message="Start reading requestOptions from remote service, calling with: \n${body}"  loggingLevel="DEBUG"/>
-            <to uri="cxf:bean:holding-endpointPort?defaultOperationName=GetRequestOptions&amp;synchronous=true" />
-            <log message="result: ${body}"  loggingLevel="DEBUG"/>
+    <routeContext id="loansProducer" xmlns="http://camel.apache.org/schema/spring" >
+
+        <route group="loans" id="loansProducer">
+            <from uri="direct-vm:restLoans"/>
+            <process ref="processAuthorization"/>
+            <to uri="direct-vm:loans?block=true"/>
+            <to uri="direct-vm:produceJson"/>
+            <onException>
+                <exception>java.lang.IllegalArgumentException</exception>
+                <exception>io.jsonwebtoken.MalformedJwtException</exception>
+                <exception>io.jsonwebtoken.SignatureException</exception>
+                <exception>io.jsonwebtoken.ExpiredJwtException</exception>
+                <handled>
+                    <constant>true</constant>
+                </handled> 
+                <setHeader headerName="Exchange.HTTP_RESPONSE_CODE">
+                    <constant>401</constant>
+                </setHeader>
+                <setBody>
+                    <simple>${exception.message}</simple>
+                </setBody>
+            </onException>
         </route>
     </routeContext>
+
 </beans>

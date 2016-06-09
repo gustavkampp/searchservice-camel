@@ -19,20 +19,47 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
        xmlns:amq="http://activemq.apache.org/schema/core" xmlns:camel="http://camel.apache.org/schema/spring"
        xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
        xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
        http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    
+    <!-- Global beans -->
+    <!-- Accessing configuration file defined in JNDI -->
     <bean id="configurationfile" class="org.springframework.jndi.JndiObjectFactoryBean">
         <property name="jndiName" value="java:comp/env/searchservice-ws/configuration"/>
     </bean>
+    <!-- create a propperty structure for accessing the configuration file -->
     <bean id="searchserviceProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
         <property name="location" ref="configurationfile"/>
     </bean>
+    <!-- a bean that verifies JWT -->
+    <bean id="processAuthorization" class="dk.statsbiblioteket.searchservice.camel.authorization.AuthorizationProcessor"/>
 
+    <!-- CXF Endpoint beans  -->
+    <cxf:cxfEndpoint id="esag-endpointPort" 
+        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.esag.EsagSoap"
+        wsdlURL="{{searchservice.wsesag.url}}"
+    /> 
+    <cxf:cxfEndpoint id="storage-endpointPort" 
+        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.sstorage.StorageWS"
+        wsdlURL="{{searchservice.storagews.url}}"
+    />
+    <cxf:cxfEndpoint id="userRegistry-endpointPort" 
+        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.uregistry.UserRegistrySoap"
+        wsdlURL="{{searchservice.wsuserregistry.url}}"
+        
+    />
+    <cxf:cxfEndpoint id="holding-endpointPort" 
+        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.holding.HoldingsSoap"
+        wsdlURL="{{searchservice.holdings.url}}"
+    />
+
+    
+    
 
     <import resource="*/*.xml"/>
     <import resource="produceJson.xml"/>
@@ -65,6 +92,12 @@
         <routeContextRef ref="requestSummaryConsumer"/>
         <routeContextRef ref="requestSummaryProducer"/>
 
+        <routeContextRef ref="loansConsumer"/>
+        <routeContextRef ref="loansProducer"/>
+
+        <routeContextRef ref="getUserConsumer"/>
+        <routeContextRef ref="getUserProducer"/>
+
         <routeContextRef ref="requestOptionsV2Producer"/>
 
         <restContextRef ref="facultyInfoRestContext"/>
@@ -74,6 +107,8 @@
         <restContextRef ref="requestOptionsV2RestContext"/>
         <restContextRef ref="getSagerRestContext"/>
         <restContextRef ref="requestSummaryRestContext"/>
+        <restContextRef ref="loansRestContext"/>
+        <restContextRef ref="getUserRestContext"/>
 
         <!-- Common functionality for all cameContexts -->        
         <restConfiguration component="servlet" contextPath="/searchservice-camel/v2"/>

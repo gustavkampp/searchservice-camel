@@ -32,11 +32,6 @@ http://localhost:8084/searchservice-camel/camel/getPickupOptions/4099001800
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    <cxf:cxfEndpoint id="userRegistry-endpointPort" 
-        serviceClass="dk.statsbiblioteket.searchservice.common.wsgen.uregistry.UserRegistrySoap"
-        wsdlURL="{{searchservice.wsuserregistry.url}}"
-        
-    />
     <bean id="pickupOptionsConsumer-cxftype" class="dk.statsbiblioteket.searchservice.common.wsgen.uregistry.LookupUserAttributeRequest">
         <property name="attributeGroup" value="pickup"/>
         <property name="attributeName" value="primary-pickup"/>

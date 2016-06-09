@@ -17,7 +17,7 @@
 -->
 <!--
 TEST URL IF YOU RUN THIS LOCALLY:
-http://localhost:8084/searchservice-camel/camel/getRequestOptions/4099001800/6037592
+http://localhost:8084/searchservice-camel/camel/getUser/4099001800
 -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -32,26 +32,17 @@ http://localhost:8084/searchservice-camel/camel/getRequestOptions/4099001800/603
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
     ">
-    <bean id="requestOptionsConsumer-cxftype" class="dk.statsbiblioteket.searchservice.common.wsgen.holding.RequestOptionsRequest">
-        <property name="bibliographicNumber" value="unknown"/>
-        <property name="userIdentification" value="unknown"/>
-    </bean>
-    <routeContext id="requestOptionsConsumer" xmlns="http://camel.apache.org/schema/spring" >
-        <route group="requestOptions" id="requestOptionsConsumer">
-            <from uri="direct-vm:requestOptions"/>
-            <log message="Preparing bean for requesting data ${header.borrowerid}"  loggingLevel="DEBUG"/>
-            <to uri="bean:requestOptionsConsumer-cxftype?method=setUserIdentification(${headers.borrowerid})"/>
-            <log message="Preparing bean for requesting data ${header.bibno}"  loggingLevel="DEBUG"/>
-            <to uri="bean:requestOptionsConsumer-cxftype?method=setBibliographicNumber(${headers.bibno})"/>
-            <transform>
-                <simple>
-                    ${ref:requestOptionsConsumer-cxftype}
-                </simple>
-            </transform>
-
-            <log message="Start reading requestOptions from remote service, calling with: \n${body}"  loggingLevel="DEBUG"/>
-            <to uri="cxf:bean:holding-endpointPort?defaultOperationName=GetRequestOptions&amp;synchronous=true" />
+    <bean id="getUserPrepareRequest" class="dk.statsbiblioteket.searchservice.camel.targetformats.user.PrepareGetUserRequestProcessor"/>
+    <!--<bean id="postRequest" class="dk.statsbiblioteket.searchservice.camel.targetformats.circulation.PrepareGetUserRequestProcessor"/>-->
+    <!--<bean id="handleException" class="dk.statsbiblioteket.searchservice.camel.targetformats.circulation.GetUserExceptionProcessor"/>-->
+    <routeContext id="getUserConsumer" xmlns="http://camel.apache.org/schema/spring" >
+        <route group="getUser" id="getUserConsumer">
+            <from uri="direct-vm:getUser"/>
+            <log message="Preparing bean for requesting data"  loggingLevel="DEBUG"/>
+            <process ref="getUserPrepareRequest"/>
+            <log message="Start reading getUser from remote service, calling with: \n${body}"  loggingLevel="DEBUG"/>
+            <to uri="cxf:bean:userRegistry-endpointPort?defaultOperationName=findUserAccount&amp;synchronous=true" />
             <log message="result: ${body}"  loggingLevel="DEBUG"/>
         </route>
-    </routeContext>
+    </routeContext> 
 </beans>
